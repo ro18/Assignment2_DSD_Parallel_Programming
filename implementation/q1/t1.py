@@ -2,10 +2,12 @@
 You are allowed use necessary python libraries.
 You are not allowed to have any global function or variables.
 """
-import threading
+from threading import Thread
 import pandas as pd
 import time
+from tqdm import tqdm
 
+result=0
 
 class ThreadingSolution:
     """
@@ -16,33 +18,81 @@ class ThreadingSolution:
         self.dataset_path = dataset_path
         self.dataset_size = dataset_size
 
-    def getCount():
-        print("get count")
 
 
     def run(self):
         """
         Returns the tuple of computed result and time taken. eg., ("I am final Result", 3.455)
         """
-        df = pd.read_csv(self.dataset_path)
+        def map_tasks(reading_info: list):
+            global result 
+
+            print(f"reading info:{reading_info}")
+            df = pd.read_csv(self.dataset_path, nrows=reading_info[0], skiprows=reading_info[1], header=None)
+            prefix = ['S','P']
+            matched_rows=df.iloc[:,2].str.startswith(tuple(prefix))
+            result+=matched_rows.tolist().count(True)
+
         
-        #print(f"no of rows:{len(df)}")
+        def get_results(mapping_output: list):
+            global result 
 
-        #print(df.iloc[:,1])
-        starts =['S','P']
-        matched_rows=df.iloc[:,4].str.startswith('S')
-        print(df[matched_rows])
-        data = pd.DataFrame(matched_rows,columns=['Row','Value'])
-       
-  
-            
+            for out in tqdm(mapping_output):
+                result +=out
+            return result
+    
+        def distribute_rows():
+            reading_info = []
+           # print('in dis')
+            chunk_size =  self.dataset_size // self.num_of_threads 
+            #print(f"chunk:{chunk_size}")
+            skip_rows = 0
+            for _ in range(self.num_of_threads):
+                if skip_rows + chunk_size <= self.dataset_size :
+                    reading_info.append([chunk_size, skip_rows])
+                else:
+                    reading_info.append([self.dataset_size  - skip_rows, skip_rows])
+                skip_rows += chunk_size
+            return reading_info
+        
+
+        start_time = time.time()
 
 
-        return ("4","5")
+        chunk_distribution = distribute_rows()
+        # print(f"chunk0:{chunk_distribution[0]}")
+        # print(f"chunk1:{chunk_distribution[1]}")
+        # print(f"chunk2:{chunk_distribution[2]}")
+
+
+        thread_handle = []
+
+        for j in range(0, self.num_of_threads ):
+            #print(f"chunk{j}:{chunk_distribution[j]}")
+
+            t = Thread(target=map_tasks,args=([chunk_distribution[j]]))
+            thread_handle.append(t)
+
+        for t in thread_handle:
+            t.start()
+
+        for j in range(0, self.num_of_threads):
+            thread_handle[j].join()
+
+        #final_result = get_results()
+
+        print(f"fin result:{result}")
+        end_time = round(time.time() - start_time, 2)
+   
+
+
+        return result,end_time
 
 
 if __name__ == '__main__':
     solution = ThreadingSolution(num_of_threads=4, dataset_path="implementation\Combined_Flights_2021.csv", dataset_size=6311871)
+
+    #solution = ThreadingSolution(num_of_threads=4, dataset_path="Test.csv", dataset_size=6311871)
     answer, timetaken = solution.run()
     print(answer, timetaken)
 
