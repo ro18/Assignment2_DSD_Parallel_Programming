@@ -43,9 +43,7 @@ class ThreadingSolution:
     
         def distribute_rows():
             reading_info = []
-           # print('in dis')
             chunk_size =  self.dataset_size // self.num_of_threads 
-            #print(f"chunk:{chunk_size}")
             skip_rows = 0
             for _ in range(self.num_of_threads):
                 if skip_rows + chunk_size <= self.dataset_size :
@@ -60,15 +58,11 @@ class ThreadingSolution:
 
 
         chunk_distribution = distribute_rows()
-        # print(f"chunk0:{chunk_distribution[0]}")
-        # print(f"chunk1:{chunk_distribution[1]}")
-        # print(f"chunk2:{chunk_distribution[2]}")
 
 
         thread_handle = []
 
         for j in range(0, self.num_of_threads ):
-            #print(f"chunk{j}:{chunk_distribution[j]}")
 
             t = Thread(target=map_tasks,args=([chunk_distribution[j]]))
             thread_handle.append(t)
@@ -79,9 +73,6 @@ class ThreadingSolution:
         for j in range(0, self.num_of_threads):
             thread_handle[j].join()
 
-        #final_result = get_results()
-
-        print(f"fin result:{result}")
         end_time = round(time.time() - start_time, 2)
    
 
@@ -91,8 +82,6 @@ class ThreadingSolution:
 
 if __name__ == '__main__':
     solution = ThreadingSolution(num_of_threads=4, dataset_path="implementation\Combined_Flights_2021.csv", dataset_size=6311871)
-
-    #solution = ThreadingSolution(num_of_threads=4, dataset_path="Test.csv", dataset_size=6311871)
     answer, timetaken = solution.run()
     print(answer, timetaken)
 
