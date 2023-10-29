@@ -19,9 +19,12 @@ class MPISolution:
         """
         Returns the tuple of computed result and time taken. eg., ("I am final Result", 3.455)
         """
+        start = time.time()
         comm = MPI.COMM_WORLD
         size = comm.Get_size()
         rank = comm.Get_rank()
+
+        results = []
 
         if rank == 0:
             def distribute_rows(n_rows: int, n_processes):
@@ -40,20 +43,24 @@ class MPISolution:
             chunk_distribution = distribute_rows(n_rows=self.dataset_size, n_processes=slave_workers)
 
             # distribute tasks to slaves
-            start = time.time()
+            
             for worker in range(1, size):
                 chunk_to_process = worker-1
                 comm.send(chunk_distribution[chunk_to_process], dest=worker)
 
         # receive and aggregate results from slave
-            results = []
+            
             for worker in (range(1, size)):  # receive
                 result = comm.recv(source=worker)
                 results.append(result)
                 print(f'received from Worker slave {worker}:{result}')
 
-            out = sum(results)
-            return out, round(time.time() - start,2)
+            return sum(results), round(time.time() - start,2)
+
+
+
+            
+
         # out = 0
         # for r in results:
         #     out = out + r.isna().sum()
@@ -68,6 +75,12 @@ class MPISolution:
             matched_rows=df.iloc[:,2].str.startswith(tuple(prefix))
             result=matched_rows.tolist().count(True)
             comm.send(result, dest=0)
+
+       
+
+
+
+        
 
 
 if __name__ == '__main__':

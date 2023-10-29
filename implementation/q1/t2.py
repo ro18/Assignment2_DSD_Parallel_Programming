@@ -32,6 +32,7 @@ class MultiProcessingSolution:
         """
         Returns the tuple of computed result and time taken. eg., ("I am final Result", 3.455)
         """
+        start = time.time()
 
         def reduce_task(mapping_output: list):
             reduce_out = 0
@@ -52,10 +53,9 @@ class MultiProcessingSolution:
                 skip_rows += chunk_size
             return reading_info
 
-        print(distribute_rows(n_rows=self.dataset_size, n_processes=self.num_of_processes))
+        #print(distribute_rows(n_rows=self.dataset_size, n_processes=self.num_of_processes))
 
         p = Pool(processes=self.num_of_processes)
-        start = time.time()
 
         result = p.starmap(map_tasks, zip(distribute_rows(n_rows=self.dataset_size, n_processes=self.num_of_processes),itertools.repeat(self.dataset_path)))
         print(result)

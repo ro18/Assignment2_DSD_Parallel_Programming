@@ -24,6 +24,8 @@ class ThreadingSolution:
         """
         Returns the tuple of computed result and time taken. eg., ("I am final Result", 3.455)
         """
+        start_time = time.time()
+
         def map_tasks(reading_info: list):
             global result 
 
@@ -54,7 +56,6 @@ class ThreadingSolution:
             return reading_info
         
 
-        start_time = time.time()
 
 
         chunk_distribution = distribute_rows()
