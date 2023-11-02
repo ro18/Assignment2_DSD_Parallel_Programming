@@ -7,13 +7,8 @@ from threading import Thread
 import pandas as pd
 import time
 from tqdm import tqdm
-from multiprocessing import Pool
+from pathos.multiprocessing import Pool
 
-def map_tasks(reading_info: list,data : str ):
-    df = pd.read_csv(data, nrows=reading_info[0], skiprows=reading_info[1], header=None)
-    prefix = ['S','P']
-    matched_rows=df.iloc[:,2].str.startswith(tuple(prefix))
-    return matched_rows.tolist().count(True)
     
 
 
@@ -25,6 +20,8 @@ class MultiProcessingSolution:
         self.num_of_processes = num_of_processes
         self.dataset_path = dataset_path
         self.dataset_size = dataset_size
+        self.final_result=pd.DataFrame()
+
 
 
 
@@ -34,31 +31,105 @@ class MultiProcessingSolution:
         """
         start = time.time()
 
-        def reduce_task(mapping_output: list):
-            reduce_out = 0
-            for out in tqdm(mapping_output):
-                reduce_out +=out
+        global final_result 
 
-            return reduce_out
+        def reduce_task(mapping_output: dict):
+            reduce_out = {}
+
+            for out in tqdm(mapping_output):
+                for key, value in out.items():
+
+                    print(f"items:{out.items()}")
+
+                    print("key dict")
+                    print(f"key:{key}")
+
+
+                    if key in reduce_out:
+                        reduce_out[key] = reduce_out.get(key) + value
+                    else:
+                        reduce_out[key] = value
+            
+
+            print("max")
+            print(max(reduce_out.values()))
+
+
+            print("max key")
+
+
+            print(max(reduce_out, key=reduce_out.get))
+
+
+            return max(reduce_out, key=reduce_out.get)
 
         def distribute_rows(n_rows: int, n_processes):
             reading_info = []
             chunk_size = n_rows // n_processes
-            skip_rows = 0
+            skip_rows = 1
             for _ in range(n_processes):
                 if skip_rows + chunk_size <= n_rows:
                     reading_info.append([chunk_size, skip_rows])
                 else:
                     reading_info.append([n_rows - skip_rows, skip_rows])
                 skip_rows += chunk_size
+            print(reading_info)
+            if reading_info[len(reading_info)-1] != self.dataset_size:
+                print("f")
+
+                reading_info[len(reading_info)-1]=[self.dataset_size  - skip_rows, skip_rows]
+                print(reading_info[len(reading_info)-1])
             return reading_info
 
-        #print(distribute_rows(n_rows=self.dataset_size, n_processes=self.num_of_processes))
-
         p = Pool(processes=self.num_of_processes)
+        
+        def map_tasks(reading_info: list,data : str ):      
+
+            df = pd.read_csv(data, nrows=reading_info[0], skiprows=reading_info[1], header=None, index_col=False)
+            prefix = ['S','P']
+
+            print("df")
+
+            print(df)
+
+            df['origin_with_S_P'] = df.iloc[:,2].str.startswith(tuple(prefix))
+
+            total_s_or_p = df['origin_with_S_P'].tolist().count(True)
+
+            print("total")
+
+            print(total_s_or_p)
+
+            result = (
+            df.groupby(df.iloc[:,1]).apply(lambda x : pd.Series({
+                #'S_P_Percentage':  (x['origin_with_S_P'].sum() / total_s_or_p) * 100
+                'S_P_Percentage':  x['origin_with_S_P'].sum()
+
+            }))
+            .reset_index()
+            )
+
+            total_row = len(result.index)
+
+
+            print("check")
+            print(result)
+
+            print(result.set_index(1)['S_P_Percentage'].to_dict())
+
+            #print(result.iloc[1:total_row].to_dict('list'))
+
+
+
+            return result.set_index(1)['S_P_Percentage'].to_dict()
+        
 
         result = p.starmap(map_tasks, zip(distribute_rows(n_rows=self.dataset_size, n_processes=self.num_of_processes),itertools.repeat(self.dataset_path)))
-        print(result)
+
+        # print("result")
+        # print(result)
+
+
         final_result = reduce_task(result)
         p.close()
         p.join()
@@ -69,7 +140,10 @@ class MultiProcessingSolution:
 
 
 if __name__ == '__main__':
-    solution = MultiProcessingSolution(num_of_processes=4, dataset_path="implementation\Combined_Flights_2021.csv", dataset_size=6311871)
+    #solution = MultiProcessingSolution(num_of_processes=4, dataset_path="implementation\Combined_Flights_2021.csv", dataset_size=6311871)
+
+    solution = MultiProcessingSolution(num_of_processes=4, dataset_path="C:\\Users\\R_CORDEI\Desktop\\DSD-A2\\Assignment2_DSD_Parallel_Programming\\Test.csv",dataset_size=7)
+
     result, timetaken = solution.run()
     print(result, timetaken)
 
