@@ -3,9 +3,15 @@ You are allowed use necessary python libraries.
 You are not allowed to have any global function or variables.
 """
 
+from os import system
+import sys
 import time
+import math
 import pandas as pd
 from mpi4py import MPI
+import pandas as pd
+import time
+from tqdm import tqdm
 
 class MPISolution:
     """
@@ -14,11 +20,61 @@ class MPISolution:
     def __init__(self, dataset_path=None, dataset_size=None):
         self.dataset_path = dataset_path
         self.dataset_size = dataset_size
+        self.process_size=4
+
+
+    
 
     def run(self):
         """
         Returns the tuple of computed result and time taken. eg., ("I am final Result", 3.455)
         """
+
+        final_results=""
+
+        def reduce_task(mapping_output: dict, size:int):
+            reduce_out = {}
+
+            for out in tqdm(mapping_output):
+                for key, value in out.items():
+
+                    # print(f"items:{out.items()}")
+
+                    # print("key dict")
+                    # print(f"key:{key}")
+
+
+                    if key in reduce_out:
+                        if not math.isnan(value):
+                            reduce_out[key] = reduce_out.get(key) + value
+                    else:
+                        reduce_out[key] = value
+
+                    # print("output now")
+                    # print(reduce_out)
+            
+
+               
+           
+
+
+            #print("max")
+
+            #print(max(reduce_out.values()))
+
+            for key, value in reduce_out.items():
+                print(f"value:{value}")
+         
+                reduce_out[key] = value/self.process_size
+
+            #print("max key")
+
+
+            #print(max(reduce_out, key=reduce_out.get))
+
+
+            return max(reduce_out, key=reduce_out.get)
+        
         start = time.time()
         comm = MPI.COMM_WORLD
         size = comm.Get_size()
@@ -48,33 +104,100 @@ class MPISolution:
                 chunk_to_process = worker-1
                 comm.send(chunk_distribution[chunk_to_process], dest=worker)
 
-        # receive and aggregate results from slave
-            
+                 # receive and aggregate results from slave
+
             for worker in (range(1, size)):  # receive
                 result = comm.recv(source=worker)
                 results.append(result)
-                print(f'received from Worker slave {worker}:{result}')
+                #print(f'received from Worker slave {worker}:{result}')
 
-            return sum(results), round(time.time() - start,2)
+
+
+            final_results=""
+            
+            final_results = reduce_task(results,comm.Get_size())
+
+            #print("here")
+
+
+            final_tuple = (final_results,round(time.time() - start,2))
+
+            
+            return final_tuple
+        
 
 
 
             
 
-        # out = 0
-        # for r in results:
-        #     out = out + r.isna().sum()
 
-        # print(f'missing values: {out}', '\ndone.')
+            
+
+
+   
+
+
+
+
 
 
         elif rank > 0:
             chunk_to_process = comm.recv()
             df = pd.read_csv(self.dataset_path, nrows=chunk_to_process[0], skiprows=chunk_to_process[1], header=None)
             prefix = ['S','P']
-            matched_rows=df.iloc[:,2].str.startswith(tuple(prefix))
-            result=matched_rows.tolist().count(True)
-            comm.send(result, dest=0)
+
+            df['origin_with_S_P'] = df.iloc[:,2].str.startswith(tuple(prefix))
+
+            #print(df['origin_with_S_P'])
+
+            total_s_or_p = df['origin_with_S_P'].tolist().count(True)
+
+            #print("total")
+
+           # print(total_s_or_p)
+
+            result = (
+            df.groupby(df.iloc[:,1]).apply(lambda x : pd.Series({
+                'S_P_Percentage':  (x['origin_with_S_P'].sum() / total_s_or_p) * 100
+                #'S_P_Percentage':  x['origin_with_S_P'].sum()
+
+            }))
+            .reset_index()
+            )
+            #print(result.set_index(1)['S_P_Percentage'].to_dict())
+            comm.send( result.set_index(1)['S_P_Percentage'].to_dict(), dest=0)
+
+            return ("none from slaves","NA")
+
+
+            
+
+
+
+
+
+        
+
+        
+
+
+
+        
+     
+
+
+
+
+
+           
+
+
+
+        
+
+
+
+# mpiexec -n 4 python implementation/q1/t3.py
 
        
 
@@ -84,7 +207,7 @@ class MPISolution:
 
 
 if __name__ == '__main__':
-    solution = MPISolution(dataset_path="C:\\Users\\R_CORDEI\\Desktop\\DSD-A2\\Assignment2_DSD_Parallel_Programming\\implementation\\Combined_Flights_2021.csv", dataset_size=6311871)
+    solution = MPISolution(dataset_path="implementation\Combined_Flights_2021.csv", dataset_size=6311871)
     answer, timetaken = solution.run()
     print(answer, timetaken)
 

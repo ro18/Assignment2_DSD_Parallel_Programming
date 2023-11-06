@@ -44,7 +44,9 @@ class ThreadingSolution():
 
 
                     if key in reduce_out:
-                        reduce_out[key] = reduce_out.get(key) + value
+
+                        if not math.isnan(value):
+                            reduce_out[key] = reduce_out.get(key) + value         
                     else:
                         reduce_out[key] = value
             
@@ -57,7 +59,11 @@ class ThreadingSolution():
 
 
             print(max(reduce_out, key=reduce_out.get))
-
+            
+            for key, value in reduce_out.items():
+                print(f"value:{value}")
+                reduce_out[key]= value/self.num_of_threads
+                print(reduce_out[key])
 
             return max(reduce_out, key=reduce_out.get)
         
@@ -85,8 +91,8 @@ class ThreadingSolution():
 
             result = (
             df.groupby(df.iloc[:,1]).apply(lambda x : pd.Series({
-                #'S_P_Percentage':  (x['origin_with_S_P'].sum() / total_s_or_p) * 100
-                'S_P_Percentage':  x['origin_with_S_P'].sum()
+                'S_P_Percentage':  (x['origin_with_S_P'].sum() / total_s_or_p) * 100
+                #'S_P_Percentage':  x['origin_with_S_P'].sum()
 
             }))
             .reset_index()

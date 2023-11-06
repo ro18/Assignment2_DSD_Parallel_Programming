@@ -3,6 +3,7 @@ You are allowed use necessary python libraries.
 You are not allowed to have any global function or variables.
 """
 import itertools
+import math
 from threading import Thread
 import pandas as pd
 import time
@@ -20,7 +21,6 @@ class MultiProcessingSolution:
         self.num_of_processes = num_of_processes
         self.dataset_path = dataset_path
         self.dataset_size = dataset_size
-        self.final_result=pd.DataFrame()
 
 
 
@@ -31,7 +31,6 @@ class MultiProcessingSolution:
         """
         start = time.time()
 
-        global final_result 
 
         def reduce_task(mapping_output: dict):
             reduce_out = {}
@@ -46,14 +45,28 @@ class MultiProcessingSolution:
 
 
                     if key in reduce_out:
-                        reduce_out[key] = reduce_out.get(key) + value
+                        if not math.isnan(value):
+                            reduce_out[key] = reduce_out.get(key) + value
                     else:
                         reduce_out[key] = value
+
+                    print("output now")
+                    print(reduce_out)
             
 
+               
+           
+
+
             print("max")
+
+            # print(reduce_out)
             print(max(reduce_out.values()))
 
+            for key, value in reduce_out.items():
+                print(f"value:{value}")
+                reduce_out[key]= value/self.num_of_processes
+                print(reduce_out[key])
 
             print("max key")
 
@@ -94,6 +107,8 @@ class MultiProcessingSolution:
 
             df['origin_with_S_P'] = df.iloc[:,2].str.startswith(tuple(prefix))
 
+            print(df['origin_with_S_P'])
+
             total_s_or_p = df['origin_with_S_P'].tolist().count(True)
 
             print("total")
@@ -102,8 +117,8 @@ class MultiProcessingSolution:
 
             result = (
             df.groupby(df.iloc[:,1]).apply(lambda x : pd.Series({
-                #'S_P_Percentage':  (x['origin_with_S_P'].sum() / total_s_or_p) * 100
-                'S_P_Percentage':  x['origin_with_S_P'].sum()
+                'S_P_Percentage':  (x['origin_with_S_P'].sum() / total_s_or_p) * 100
+                #'S_P_Percentage':  x['origin_with_S_P'].sum()
 
             }))
             .reset_index()
@@ -129,6 +144,10 @@ class MultiProcessingSolution:
         # print("result")
         # print(result)
 
+        print("after processing")
+
+        print(result)
+
 
         final_result = reduce_task(result)
         p.close()
@@ -140,9 +159,9 @@ class MultiProcessingSolution:
 
 
 if __name__ == '__main__':
-    #solution = MultiProcessingSolution(num_of_processes=4, dataset_path="implementation\Combined_Flights_2021.csv", dataset_size=6311871)
+    solution = MultiProcessingSolution(num_of_processes=4, dataset_path="implementation\Combined_Flights_2021.csv", dataset_size=6311871)
 
-    solution = MultiProcessingSolution(num_of_processes=4, dataset_path="C:\\Users\\R_CORDEI\Desktop\\DSD-A2\\Assignment2_DSD_Parallel_Programming\\Test.csv",dataset_size=7)
+    #solution = MultiProcessingSolution(num_of_processes=4, dataset_path="C:\\Users\\R_CORDEI\Desktop\\DSD-A2\\Assignment2_DSD_Parallel_Programming\\Test.csv",dataset_size=7)
 
     result, timetaken = solution.run()
     print(result, timetaken)
