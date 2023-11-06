@@ -33,25 +33,19 @@ class MPISolution:
             for out in tqdm(mapping_output):
                 for key, value in out.items():
 
-
-
-
                     if key in reduce_out:
                         if not math.isnan(value):
                             reduce_out[key] = reduce_out.get(key) + value
                     else:
                         reduce_out[key] = value
 
-                    print(reduce_out)
             
 
 
             for key, value in reduce_out.items():
-                print(f"value:{value}")
          
-                reduce_out[key] = value/self.process_size
+                reduce_out[key] = value/(size-1)
 
-  
 
 
             return max(reduce_out, key=reduce_out.get)
@@ -81,23 +75,17 @@ class MPISolution:
             slave_workers = size - 1
             chunk_distribution = distribute_rows(n_rows=self.dataset_size, n_processes=slave_workers)
 
-            # distribute tasks to slaves
             
             for worker in range(1, size):
                 chunk_to_process = worker-1
                 comm.send(chunk_distribution[chunk_to_process], dest=worker)
 
-        # receive and aggregate results from slave
 
-            for worker in (range(1, size)):  # receive
+            for worker in (range(1, size)): 
                 result = comm.recv(source=worker)
                 results.append(result)
 
-        
-
-
-
-            
+    
         
             final_results = reduce_task(results,comm.Get_size())
 
@@ -127,14 +115,10 @@ class MPISolution:
             result = (
             df.groupby(df.iloc[:,1]).apply(lambda x : pd.Series({
                 'onTime_Percentage':  (x['on_time'].eq(0).sum() / on_time ) * 100
-                #'S_P_Percentage':  x['origin_with_S_P'].sum()
 
             }))
             .reset_index()
             )
-
-
-           #print(result)
 
 
             comm.send( result.set_index(1)['onTime_Percentage'].to_dict(), dest=0)

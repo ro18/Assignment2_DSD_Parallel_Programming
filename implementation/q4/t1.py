@@ -32,17 +32,8 @@ class ThreadingSolution:
         def reduce_task(mapping_output: dict):
             reduce_out = {}
 
-            print("reduce")
-
-
             for out in tqdm(mapping_output):
                 for key, value in out.items():
-
-                    # print(f"items:{out.items()}")
-
-                    # print("key dict")
-                    # print(f"key:{key}")
-
 
                     if key in reduce_out:
 
@@ -52,20 +43,6 @@ class ThreadingSolution:
                         reduce_out[key] = value
             
 
-            #print("max")
-           # print(max(reduce_out.values()))
-
-
-           # print("max key")
-
-
-            #print(max(reduce_out, key=reduce_out.get))
-            
-            # for key, value in reduce_out.items():
-            #     #print(f"value:{value}")
-            #     reduce_out[key]= value/self.num_of_threads
-            #     #print(reduce_out[key])
-
             return max(reduce_out, key=reduce_out.get)
     
 
@@ -74,23 +51,14 @@ class ThreadingSolution:
         def map_tasks(reading_info: list, result_queue: queue):
 
     
-            # print(reading_info)
-
-
-
-    
             df = pd.read_csv(self.dataset_path, nrows=reading_info[0], skiprows=reading_info[1])
 
-           # print("df df df")
-            #print(df)
-            #and df.iloc[:2] =='ATL')
-
+ 
             df_ATL = df[(pd.to_datetime(df.iloc[:,0]).dt.month == 11)]
 
+            df_ATL = df_ATL[pd.to_datetime(df.iloc[:,0]).dt.year == 2021]
             df_ATL= df_ATL[df_ATL.iloc[:,2].str.contains('ATL')]
 
-            #print("hey")
-            print(df_ATL)
 
 
             def get_hour(number):
@@ -109,25 +77,13 @@ class ThreadingSolution:
 
             df_ATL['Hour']= df_ATL.iloc[:,6].apply(get_hour)
 
-            #print("hour")
-
-            #print(df_ATL["Hour"])
-
-            #print("hourly")
 
             hourly_avg_count  = df_ATL['Hour'].value_counts()
 
-            #print(hourly_avg_count.sort_values())
 
             result_queue.put(hourly_avg_count.to_dict())
 
-
-            # busiest_hour = hourly_avg_count.idxmax()
-
-            # print(busiest_hour)
-        
-
-            
+               
 
     
         def distribute_rows():
@@ -141,7 +97,6 @@ class ThreadingSolution:
                     reading_info.append([self.dataset_size - skip_rows, skip_rows])
                 skip_rows += chunk_size
 
-            #print(reading_info)
                        
             return reading_info
         
@@ -157,7 +112,6 @@ class ThreadingSolution:
         result_queue = queue.Queue()
 
         for j in range(0, self.num_of_threads ):
-            print(f"chunk:{chunk_distribution[j]}")
 
             t = Thread(target=map_tasks,args=(chunk_distribution[j],result_queue))
             thread_handle.append(t)
@@ -170,22 +124,17 @@ class ThreadingSolution:
 
         for j in range(0, self.num_of_threads):
             thread_handle[j].join()
-            #print("fin")
+           
             result = result_queue.get()
 
-            #print(result)
             results.append(result)
 
-           # print("results")
-            print(results)
 
 
 
 
-        #print("final result")
         final_result = reduce_task(results)
 
-        #print(final_result)
 
 
         end_time = round(time.time() - start_time, 2)
@@ -196,9 +145,6 @@ class ThreadingSolution:
 
 if __name__ == '__main__':
     solution = ThreadingSolution(num_of_threads=4, dataset_path="implementation/Combined_Flights_2021.csv", dataset_size=6311871)
-
-    #solution = ThreadingSolution(num_of_threads=4, dataset_path="Test2.csv", dataset_size=5)
-
     answer, timetaken = solution.run()
     print(answer, timetaken)
 

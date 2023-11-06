@@ -28,17 +28,8 @@ class ThreadingSolution:
         def reduce_task(mapping_output: dict):
             reduce_out = {}
 
-            print("reduce")
-
-
             for out in tqdm(mapping_output):
                 for key, value in out.items():
-
-                    print(f"items:{out.items()}")
-
-                    print("key dict")
-                    print(f"key:{key}")
-
 
                     if key in reduce_out:
 
@@ -47,20 +38,12 @@ class ThreadingSolution:
                     else:
                         reduce_out[key] = value
             
-
-            print("max")
-            print(max(reduce_out.values()))
-
-
-            print("max key")
-
-
-            print(max(reduce_out, key=reduce_out.get))
             
             for key, value in reduce_out.items():
-                print(f"value:{value}")
                 reduce_out[key]= value/self.num_of_threads
-                print(reduce_out[key])
+
+
+
 
             return max(reduce_out, key=reduce_out.get)
     
@@ -68,41 +51,18 @@ class ThreadingSolution:
         start_time = time.time()
 
         def map_tasks(reading_info: list, result_queue: queue):
-
-    
-            print(reading_info)
-
-
-
-    
+   
             df = pd.read_csv(self.dataset_path, nrows=reading_info[0], skiprows=reading_info[1], header=None)
             df['on_time'] = df.iloc[:,11]
-
-            print("on_time")
-
-            print(df['on_time'])
-
             on_time = df['on_time'].tolist().count(0)
-
-
-            check = df['on_time'].value_counts()
-
-            print(check)
-
-            print(on_time)
-
             result = (
             df.groupby(df.iloc[:,1]).apply(lambda x : pd.Series({
                 'onTime_Percentage':  (x['on_time'].eq(0).sum() / on_time ) * 100
-                #'S_P_Percentage':  x['origin_with_S_P'].sum()
 
             }))
             .reset_index()
             )
 
-            print("look for this")
-
-            print(result)
             result_queue.put(result.set_index(1)['onTime_Percentage'].to_dict())
             
 
@@ -120,7 +80,6 @@ class ThreadingSolution:
                     reading_info.append([self.dataset_size - skip_rows, skip_rows])
                 skip_rows += chunk_size
 
-            print(reading_info)
                        
             return reading_info
         
@@ -136,7 +95,6 @@ class ThreadingSolution:
         result_queue = queue.Queue()
 
         for j in range(0, self.num_of_threads ):
-            print(f"chunk:{chunk_distribution[j]}")
 
             t = Thread(target=map_tasks,args=(chunk_distribution[j],result_queue))
             thread_handle.append(t)
@@ -149,24 +107,14 @@ class ThreadingSolution:
 
         for j in range(0, self.num_of_threads):
             thread_handle[j].join()
-            print("fin")
             result = result_queue.get()
-
-            print(result)
             results.append(result)
 
-            print("results")
-            print(results)
 
 
 
 
-        print("final result")
         final_result = reduce_task(results)
-
-        print(final_result)
-
-
         end_time = round(time.time() - start_time, 2)
    
 
@@ -177,7 +125,7 @@ class ThreadingSolution:
 
 
 if __name__ == '__main__':
-    solution = ThreadingSolution(num_of_threads=4, dataset_path="implementation/Combined_Flights_2021.csv", dataset_size=6311871)
+    solution = ThreadingSolution(num_of_threads=10, dataset_path="implementation/Combined_Flights_2021.csv", dataset_size=6311871)
     answer, timetaken = solution.run()
     print(answer, timetaken)
 

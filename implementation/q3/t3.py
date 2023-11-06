@@ -30,15 +30,7 @@ class MPISolution:
 
             none_values = sum(x is None for x in mapping_output)
 
-            #print(none_values)
-
-
-
-
             mapping_output = [x for x in mapping_output if x is not None]
-
-            #print(mapping_output)
-
 
 
             for out in tqdm(mapping_output):
@@ -51,31 +43,14 @@ class MPISolution:
                     else:
                         reduce_out[key] = value
 
-                   # print("output now")
-                    
-            #print(reduce_out)
-
+            
                
            
 
-
-            #print("max")
-
-            # print(reduce_out)
-            #print(max(reduce_out.values()))
-
             for key, value in reduce_out.items():
-                #print(f"value:{value}")
                 reduce_out[key]= value / (size - none_values - 1)
-               # print(reduce_out[key])
 
-            #print("max key")
-
-
-           # print(max(reduce_out, key=reduce_out.get))
-
-            #print("max element value")
-            #print(reduce_out.get(max(reduce_out, key=reduce_out.get)))
+      
 
 
 
@@ -91,7 +66,6 @@ class MPISolution:
 
         if rank == 0:
 
-            #rint("in rank 0")
 
             def distribute_rows(n_rows: int, n_processes):
                 reading_info = []
@@ -104,44 +78,28 @@ class MPISolution:
                         reading_info.append([self.dataset_size - skip_rows, skip_rows])
                     skip_rows += chunk_size
 
-            # print(reading_info)
                         
                 return reading_info
 
             slave_workers = size - 1
             chunk_distribution = distribute_rows(n_rows=self.dataset_size, n_processes=slave_workers)
 
-            # distribute tasks to slaves
             
             for worker in range(1, size):
                 chunk_to_process = worker-1
-                #print(f"worker:{worker}")
                 comm.send(chunk_distribution[chunk_to_process], dest=worker)
 
-        # receive and aggregate results from slave
 
             for worker in (range(1, size)):
-                #print("workers")  # receive
                 result = comm.recv(source=worker)
-                #print(result)
                 results.append(result)
 
 
-            
-            #print("results")
-
-           # print(results)
-        
-
-
-
-            
+ 
         
             final_results = reduce_task(results,comm.Get_size())
 
-            #print("final_results")
 
-           # print(final_results)
 
             return final_results, round(time.time() - start,2)
         
@@ -151,34 +109,24 @@ class MPISolution:
 
         elif rank > 0:
             chunk_to_process = comm.recv()
-           # print(chunk_to_process)
             df = pd.read_csv(self.dataset_path, nrows=chunk_to_process[0], skiprows=chunk_to_process[1], header=None)
 
-
-            #print("df iloc 55 ")
-            #print(df.iloc[:,55])
             df['arr_delay_check'] = df.iloc[:,55] < 0
 
-            #print("arr_delay_check")
 
 
-            #print(df['arr_delay_check']) 
 
             df['Quarter'] = pd.PeriodIndex(df.iloc[:,0], freq='Q-DEC').strftime('Q%q')
 
-            #print(df['Quarter'])
 
 
             df2Quarter = df.loc[df['Quarter'] == "Q1"]
 
-            #print("df2Quarter")
-
-            #print(df2Quarter)
 
 
             if not df2Quarter.empty:
 
-                #print(f"rank:{rank}")
+
              
                 result = (
                 df2Quarter.groupby(df2Quarter.iloc[:,1]).apply(lambda x : pd.Series({
@@ -187,11 +135,9 @@ class MPISolution:
                 }))
                 .reset_index()
                 )
-               # print("resultssss")
-               # print(result.set_index(1)['arrive_early_per'].to_dict())
+
                 comm.send(result.set_index(1)['arrive_early_per'].to_dict(), dest=0)
             else:
-                #print("here")
                 comm.send(None, dest=0)
 
 
